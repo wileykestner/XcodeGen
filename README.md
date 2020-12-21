@@ -136,6 +136,10 @@ Options:
 - **--use-cache**: Used to prevent unnecessarily generating the project. If this is set, then a cache file will be written to when a project is generated. If `xcodegen` is later run but the spec and all the files it contains are the same, the project won't be generated.
 - **--cache-path**: A custom path to use for your cache file. This defaults to `~/.xcodegen/cache/{PROJECT_SPEC_PATH_HASH}`
 
+Optional Environment Variables:
+
+`XCODEGEN_SETTINGS_PRESETS_PARENT_DIR`: When certain build systems (i.e Bazel) use `xcodegen` as a dependency, the `SettingsPresets` directory can sometimes be placed in surprising locations.  Setting this environment variables gives users of these build systems a way to provide a custom path to the parent directory of  the `SettingsPresets` directory that overrides the defaults lookup locations if it is found, and proceeds to the default lookup locations if it is not found.
+
 There are other commands as well such as `xcodegen dump` which lets out output the resolved spec in many different formats, or write it to a file. Use `xcodegen help` to see more detailed usage information.
 
 ## Dependency Diagrams
