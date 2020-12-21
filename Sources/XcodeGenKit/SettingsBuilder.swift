@@ -186,22 +186,41 @@ extension SettingsPresetFile {
         if let cached = settingPresetSettings[path] {
             return cached.value
         }
-        let bundlePath = Path(Bundle.main.bundlePath)
-        let relativePath = Path("SettingPresets/\(path).yml")
-        var possibleSettingsPaths: [Path] = [
-            relativePath,
-            bundlePath + relativePath,
-            bundlePath + "../share/xcodegen/\(relativePath)",
-            Path(#file).parent().parent().parent() + relativePath,
-        ]
 
-        if let symlink = try? (bundlePath + "xcodegen").symlinkDestination() {
-            possibleSettingsPaths = [
-                symlink.parent() + relativePath,
-            ] + possibleSettingsPaths
+        let bundlePath = Path(Bundle.main.bundlePath)
+        let relativeSettingsPresetsPath = Path("SettingPresets/\(path).yml")
+
+        var possibleSettingsPresetsPaths: [Path] = []
+
+        // Allow users to optionally specify the location of the `SettingPresets`
+        // parent directory as an environment variable.
+        //
+        // If the user goes out of their way to specify this environment variable,
+        // we assume they _really_ want to look for it here, so we give it first
+        // priority over the usual places we look for it.  If it is not found,
+        // we just proceed to look for it in the normal locations as usual.
+        //
+        if let settingsPresetsParentDirectory: String = ProcessInfo.processInfo.environment["XCODEGEN_SETTINGS_PRESETS_PARENT_DIR"] {
+            possibleSettingsPresetsPaths.append(Path(settingsPresetsParentDirectory) + relativeSettingsPresetsPath)
         }
 
-        guard let settingsPath = possibleSettingsPaths.first(where: { $0.exists }) else {
+        // These are the places that we look for the `SettingPresets` directory if
+        // the user hasn't gone out of their way to look for it in another place
+        // by specifying an environment variable - or if it can't be found at the
+        // location the user specified in the environment variable.
+        //
+        possibleSettingsPresetsPaths.append(relativeSettingsPresetsPath)
+        possibleSettingsPresetsPaths.append(bundlePath + relativeSettingsPresetsPath)
+        possibleSettingsPresetsPaths.append(bundlePath + "../share/xcodegen/\(relativeSettingsPresetsPath)")
+        possibleSettingsPresetsPaths.append(Path(#file).parent().parent().parent() + relativeSettingsPresetsPath)
+
+        if let symlink = try? (bundlePath + "xcodegen").symlinkDestination() {
+            possibleSettingsPresetsPaths = [
+                symlink.parent() + relativeSettingsPresetsPath,
+            ] + possibleSettingsPresetsPaths
+        }
+
+        guard let settingsPresetsPath = possibleSettingsPresetsPaths.first(where: { $0.exists }) else {
             switch self {
             case .base, .config, .platform:
                 print("No \"\(name)\" settings found")
@@ -212,7 +231,7 @@ extension SettingsPresetFile {
             return nil
         }
 
-        guard let buildSettings = try? loadYamlDictionary(path: settingsPath) else {
+        guard let buildSettings = try? loadYamlDictionary(path: settingsPresetsPath) else {
             print("Error parsing \"\(name)\" settings")
             return nil
         }
